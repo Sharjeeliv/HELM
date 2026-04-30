@@ -9,7 +9,16 @@
 # #############################
 # IMPORTS
 # #############################
+# Builtin
+import json
+from pathlib import Path
 
+# External
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.metrics import confusion_matrix
+
+# Relative
 
 
 # #############################
@@ -22,6 +31,76 @@
 # FUNCTIONS: UTILITY
 # #############################
 
+# FUNCTIONS: PLOTTING
+# *****************************
+def plot_confusion_matrix(labels, preds, class_names, title, root):
+    cm = confusion_matrix(labels, preds)
+    plt.figure(figsize=(12, 10))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
+                xticklabels=class_names, yticklabels=class_names)
+    plt.ylabel('Actual Classes')
+    plt.xlabel('Predicted Classes')
+    plt.title('Classification Confusion Matrix')
+    
+    save_path = root / 'figures' / title
+    plt.savefig(save_path, bbox_inches='tight', dpi=300)
+    print(f"Confusion matrix saved to: {save_path}")
+    plt.close()
+    
+    
+# FUNCTIONS: RESULT MANAGEMENT
+# *****************************
+# Validate folder structure:
+def validate_results_structure(root):
+    # TODO: Remove this, combine with bottom
+    results_dir = root / 'results'
+    if not results_dir.exists():
+        raise FileNotFoundError(f"Results directory not found at {results_dir}")
+    
+    # Validate subdirectories and create if missing
+    for subdir in ['experiments', 'figures', 'summaries']:
+        target_dir = results_dir / subdir
+        if target_dir.exists(): continue
+        target_dir.mkdir(parents=True)
+        print(f"Created missing directory: {target_dir}")
+
+
+def save_json_results(root, timestamp, dataset, expr, model, metrics, parameters, training_history):
+    results_dir = root / 'results' / 'experiments' / expr / timestamp
+    results_dir.mkdir(parents=True, exist_ok=True)
+    
+    result_data = {
+        "dataset": dataset,
+        "model": model,
+        "timestamp": timestamp,
+        "metrics": metrics,
+        "parameters": parameters,
+        "training_history": training_history
+    }
+    
+    save_path = results_dir / f"{dataset}_{model}.json"
+    with open(save_path, 'w') as f:
+        json.dump(result_data, f, indent=4)
+    print(f"Results saved to: {save_path}")
+
+
+def save_csv_results(root, timestamp, dataset, expr, model, metrics, parameters):
+    csv_dir = root / 'results' / 'experiments' / expr
+    csv_dir.mkdir(parents=True, exist_ok=True)
+    
+    csv_path = csv_dir / f"registry.csv"
+    header = ['timestamp', 'dataset', 'model'] + list(metrics.keys()) + list(parameters.keys())
+    
+    # Write header if file doesn't exist
+    if not csv_path.exists():
+        with open(csv_path, 'w') as f:
+            f.write(','.join(header) + '\n')
+    
+    # Append results
+    with open(csv_path, 'a') as f:
+        row = [timestamp, dataset, model] + [str(metrics[k]) for k in metrics] + [str(parameters[k]) for k in parameters]
+        f.write(','.join(row) + '\n')
+    print(f"Results appended to: {csv_path}")
 
 
 # #############################

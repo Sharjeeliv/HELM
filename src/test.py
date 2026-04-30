@@ -9,73 +9,48 @@
 # #############################
 # IMPORTS
 # #############################
+# Builtin
 
+# External
+import torch
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support as class_metrics
 
-
-# #############################
-# VARS, CONSTS, & SETUP
-# #############################
-
-
-
-# #############################
-# FUNCTIONS: UTILITY
-# #############################
-
+# Relative
+from .utils.optuna import get_model, get_optimizer
 
 
 # #############################
 # FUNCTIONS: HELPER
 # #############################
-
-
-
-# #############################
-# FUNCTIONS: MAIN
-# #############################
-
+def _metrics(preds, labels, loss):
+    a = accuracy_score(labels, preds)
+    p, r, f1, _ = class_metrics(labels, preds, average='macro', zero_division=0)
+    metrics = {'a': a, 'p': p, 'r': r, 'f': f1, 'l': loss, 
+               'preds': preds, 'labels': labels}
+    return metrics
 
 
 # #############################
 # FUNCTIONS: INTERFACE
 # #############################
+def evaluate(dataset, model, criterion, kwargs: dict):
+    X, y, m = dataset['X'], dataset['y'], dataset['mask']
+    if m is None: raise Exception("No mask provided with key 'mask'!")
+    
+    model.eval()
+    with torch.no_grad():
+        preds = model(X)
+        l = criterion(preds[m], y[m])
+        a = (preds[m].argmax(1) == y[m]).float().mean()
+
+    if kwargs.get('trial', False):     return {'l': l, 'a': a}
+    if not kwargs.get('full', False):  return {'l': l, 'a': a}
+    
+    preds = preds[m].argmax(1).cpu().numpy()
+    labels = y[m].cpu().numpy()
+    return _metrics(preds, labels, l)
 
 
-
-# #############################
-# UTILITY: SNIPPETS & NOTES
-# #############################
-
-# File template for python, paste into empty .py files
-# Please remove these notes 'UTILITY: SNIPPETS & NOTES', and heading before comitting
-
-
-# FILE HEADING BREAKDOWN
-# Utility   - General purpose functions that are only used locally
-#             If used in multiple places, move to dedicated utils.py or utils folder
-# Helper    - Specific (non-general) functions that aid in the "main" task of the file
-# Main      - Functions that correspond to the file's main algorithms or tasks
-#             Note: A file should have limited main functions and do one type of thing!
-#             In other words have a separation of concerns
-# Interface - Functions that are designed to be called by other files, internals should
-#             be kept private (i.e., start with an underscore), unless the functionality
-#             is intended to be public, like some helpers or utils
-
-# FILE HEADING SNIPPETS
-
-# 1. Avoid adding any more first-level headings
-# 2. Second-level headings can be added as follows:
-
-# *****************************
-# Heading Title
-# *****************************
-
-# Or like if directly below a first-level heading:
-
-# Heading Title
-# *****************************
-
-# 3. Third-level headings can be added as follows:
-
-# Heading Title
-# -----------------------------s
+def test(model, dataset, kwargs: dict):
+    criterion = torch.nn.CrossEntropyLoss()
+    return evaluate(dataset, model, criterion, kwargs={'full': True, **kwargs})
