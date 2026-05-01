@@ -47,6 +47,8 @@ def get_trial_params(trial: Trial, model_name: str):
     return model_params
 
 
+NON_MODEL_PARAMS = {'optimizer', 'lr', 'weight_decay'}
+
 def get_model(models, key, hparams, dataset):
     model_cls = models[key]
     # Filter non-model params

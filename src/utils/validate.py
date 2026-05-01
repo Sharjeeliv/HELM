@@ -23,7 +23,7 @@ from torch import nn
 # #############################
 # VARS, CONSTS, & SETUP
 # #############################
-
+EXCLUDED_PARAMS = {'self', 'in_dim', 'out_dim', 'dataset'}
 
 
 # #############################
@@ -43,56 +43,58 @@ def validate_models(models):
         if issubclass(model, nn.Module): continue
         raise ValueError(f"Model '{name}' is not a valid nn.Module subclass.")
 
-import numpy as np
-
-
-# Example dataset:
-dataset = {
-    'X': np.random.rand(100, 10),  # Feature matrix
-    'y': np.random.randint(0, 2, size=(100,)),  # Optional keys
-    'input_dim': 10,
-    'output_dim': 2,
-    'tr_mask': np.random.rand(100) < 0.8,  # 80% training mask
-    'va_mask': np.random.rand(100) < 0.1,  # 10% validation mask
-    'te_mask': np.random.rand(100) < 0.1,  # 10% testing mask
-    'encoder': lambda x: x,  # Identity encoder for simplicity
-    'modelwise': {
-        'data': {'extra_param': 42},
-        'func': {
-            'init': 'hi',
-            'prop': lambda: print("Model-specific propagation"),
-        }
-    }
-}
-
-
 
 def validate_dataset(dataset):
-    """
-    Validates the dataset dictionary to ensure it contains required keys and valid formats.
-    Args:
-        dataset (dict): A dictionary containing dataset information.
-    Raises:
-        ValueError: If any required key is missing.
-    """
-    
+    # --- Helper Functions ---
     def is_matrix(obj):
         return hasattr(obj, "shape") or hasattr(obj, "__array__")
 
     def _is_callable(obj):
         return callable(obj)
 
+    # --- Custom Integrity Logic ---
+    def check_integrity(d):
+        """Cross-field checks for logical consistency."""
+        # 1. Shape Consistency
+        if len(d['X']) != len(d['y']):
+            raise ValueError(f"X length ({len(d['X'])}) must match y length ({len(d['y'])})")
+        
+        
+        # Contains NAN
+        if np.isnan(d['X']).any() or np.isnan(d['y']).any():
+            raise ValueError("Dataset contains NaN values, which are not allowed.")
+        
+        # Mask Overlap
+        if (d['tr_mask'] & d['te_mask']).any():
+            raise ValueError("Data leakage detected: tr_mask and te_mask overlap!")
+        if (d['tr_mask'] & d['va_mask']).any():
+            raise ValueError("Data leakage detected: tr_mask and va_mask overlap!")
+        if (d['va_mask'] & d['te_mask']).any():
+            raise ValueError("Data leakage detected: va_mask and te_mask overlap!")
+
+        
+        # 2. Mask Alignment
+        n_samples = len(d['X'])
+        for mask_name in ['tr_mask', 'va_mask', 'te_mask']:
+            if len(d[mask_name]) != n_samples:
+                raise ValueError(f"{mask_name} length must match X length ({n_samples})")
+
+        # 3. Dimension Matching
+        if d['X'].shape[1] != d['input_dim']:
+            raise ValueError(f"X feature dim ({d['X'].shape[1]}) must match input_dim ({d['input_dim']})")
+
+        return d
+
+    # --- Combined Schema ---
     dataset_schema = Schema({
         'X': is_matrix,
-        'y': object,
+        'y': is_matrix,
         'input_dim': And(int, lambda n: n > 0),
         'output_dim': And(int, lambda n: n > 0),
-        
-        'tr_mask': object,
-        'va_mask': object,
-        'te_mask': object,
+        'tr_mask': is_matrix,
+        'va_mask': is_matrix,
+        'te_mask': is_matrix,
         'encoder': object,
-        
         'modelwise': {
             'data': dict,
             'func': {
@@ -100,11 +102,22 @@ def validate_dataset(dataset):
                 'prop': _is_callable,
             }
         }
-    })
+    }) # Runs after structural checks pass
     dataset_schema.validate(dataset)
+    check_integrity(dataset) # Runs after schema validation passes, so we know all keys exist and have correct types
+
     
 
-def validate_tuning_config(tuning_config):
+from inspect import signature
+
+
+
+def validate_hparams():
+    pass
+
+
+
+def validate_tuning_config(tuning_config, models):
     """
     Validates the tuning configuration to ensure it contains valid parameter specifications.
 
@@ -114,6 +127,24 @@ def validate_tuning_config(tuning_config):
     Raises:
         ValueError: If any parameter configuration is not in the expected format.
     """
+    
+    
+    # 1. Validate that tuning config keys match model names
+    tuning_keys = set(tuning_config.keys())
+    model_keys = set(models.keys())
+    if not model_keys.issubset(tuning_keys):
+        raise ValueError(f"Models contains keys not in tuning config: {model_keys - tuning_keys}")
+
+    # 2. Validate each parameter specification
+    #    For each model, the hparam keys should match the model parameters:
+    for model_name, model_cls in models.items():
+        model_params = set(signature(model_cls.__init__).parameters.keys()) - EXCLUDED_PARAMS
+        tuning_params = set(tuning_config[model_name].keys())
+        if not model_params.issubset(tuning_params):
+            raise ValueError(f"Model '{model_name}' has parameters not in tuning config: {model_params - tuning_params}")
+
+
+
     for model_name, params in tuning_config.items():
         for param_name, spec in params.items():
             
@@ -181,7 +212,24 @@ def validate_config_dir(root: Path):
 # #############################
 # FUNCTIONS: HELPER
 # #############################
-
+import numpy as np
+dataset = {
+        'X': np.random.rand(10, 5),
+        'y': np.random.rand(10, 2),
+        
+        'input_dim': 5,
+        'output_dim': 2,
+        
+        'te_mask': np.random.rand(10) < 0.5,
+        'tr_mask': np.random.rand(10) < 0.8,
+        'va_mask': np.random.rand(10) < 0.1,
+        'encoder': lambda x: x,  # Dummy encoder function
+        
+        'modelwise': {
+            'data': { 'extra_param': 42 },
+            'func': {'init': lambda: None, 
+                     'prop': lambda: None}
+        }}
 
 
 # #############################

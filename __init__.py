@@ -16,7 +16,7 @@ from pathlib import Path
 # External
 
 # Relative
-from .src.utils.schema import validate_models, validate_dataset, validate_config_dir
+from .src.utils.validate import validate_models, validate_dataset, validate_config_dir
 
 
 # #############################
