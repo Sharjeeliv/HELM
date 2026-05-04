@@ -16,7 +16,7 @@ from pathlib import Path
 # External
 
 # Relative
-from .src.utils.validate import validate_models, validate_dataset, validate_config_dir
+from .src.utils.validate import validate_models, validate_dataset
 
 
 # #############################
@@ -46,11 +46,11 @@ from .src.utils.validate import validate_models, validate_dataset, validate_conf
 # #############################
 # FUNCTIONS: INTERFACE
 # #############################
-def helm(root: Path, models, dataset):
+def helm(root: Path, models, dataset): pass
     
     # 1. Validation
     # 1.1 Validate paths and folder structure
-    validate_config_dir(root)
+    # validate_config_dir(root)
     # 1.2 Validate models and dataset formats
     
     # 2. Pipeline: Tuning
