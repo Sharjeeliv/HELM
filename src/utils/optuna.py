@@ -18,17 +18,24 @@ from optuna.trial import Trial
 import torch
 
 # Relative
+from .utils import run_hook
 
 
 # #############################
 # VARS, CONSTS, & SETUP
 # #############################
-
+NON_MODEL_PARAMS = {'optimizer', 'lr', 'weight_decay'}
 
 
 # #############################
 # FUNCTIONS: UTILITY
 # #############################
+def _get_hparams(root, key):
+    path = root / 'config' / 'hparam.json'
+    hparam_config = json.load(path.open('r'))
+    return hparam_config[key]
+
+
 def trial_type(trial: Trial, name: str, config: dict):
     TYPE, START, END = 0, 1, 2
     ptype = config[TYPE]
@@ -39,17 +46,17 @@ def trial_type(trial: Trial, name: str, config: dict):
     raise ValueError(f"Unknown trial type: {ptype}")
 
 
-def get_trial_params(trial: Trial, model_name: str):
+def get_trial_params(root: Path, key: str, trial: Trial):
+    params = _get_hparams(root, key)
     model_params = {}
-    for param_name, param_range in params[model_name].items():
+    for param_name, param_range in params[key].items():
         suggest_func = trial_type(trial, param_name, param_range)
         model_params[param_name] = suggest_func
     return model_params
 
 
-NON_MODEL_PARAMS = {'optimizer', 'lr', 'weight_decay'}
-
 def get_model(models, key, hparams, dataset):
+    run_hook(dataset, 'init', None)
     model_cls = models[key]
     # Filter non-model params
     model_params = {k: v for k, v in hparams.items() 

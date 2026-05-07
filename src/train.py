@@ -15,6 +15,7 @@ import json
 
 # External
 import torch
+from torch import nn
 
 # Relative
 from .utils.optuna import get_model, get_optimizer, get_trial_params
@@ -25,8 +26,8 @@ from .utils.utils import Stage
 # #############################
 # FUNCTIONS: INTERFACE
 # #############################
-def train(model, hparams, dataset, kwargs: dict):
+def train(model: nn.Module, hparams: dict, dataset: dict, epochs: int)-> nn.Module:
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = get_optimizer(model, hparams)
-    loop(model, criterion, optimizer, dataset, epochs=TR_EPOCHS, stage=Stage.TRAIN, kwargs={'full': False, **kwargs})
+    loop(model, criterion, optimizer, dataset, epochs=epochs, stage=Stage.TRAIN)
     return model

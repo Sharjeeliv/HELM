@@ -10,24 +10,23 @@
 # IMPORTS
 # #############################
 # Builtin
-from pathlib import Path
-import json
 from time import time
+from typing import Literal
 
 # External
-import torch
+from torch import nn
+from optuna import Trial
 import optuna
 
 # Relative
-from .utils.utils import EarlyStopping, epoch_print, Stage
+from .utils.utils import Stage, EarlyStopping, epoch_print, run_hook
 from .test import evaluate
 
 
 # #############################
 # FUNCTIONS: HELPER
 # #############################
-def _stopper(es: EarlyStopping, kwargs: dict):
-    trial = kwargs.get('trial', None)
+def _stopper(es: EarlyStopping, trial: Trial|None) -> bool:
     if trial and trial.should_prune():  raise optuna.TrialPruned()
     if not (es and es.early_stop):      return False 
     print(f"Early stop!", sep=' ')
@@ -45,33 +44,40 @@ def _trainer(dataset, model, optimizer, criterion):
     optimizer.step()
     return loss.item()
 
-
 # #############################
 # FUNCTIONS: INTERFACE
 # #############################
-def loop(model, criterion, optimizer, dataset, epochs, stage, kwargs: dict):
+def loop(model: nn.Module, criterion, optimizer, dataset, 
+         epochs: int, stage: Stage, trial: Trial|None =None
+         ) -> dict[str, float]:
     
     total_time = 0.0
     early_stopping = EarlyStopping()
-    is_tune = kwargs.get('trial', None) is not None
     training_history = []
     for epoch in range(1, epochs + 1):
         
         start_time = time()
+        # Hook: Run pre-forward logic if provided
+        run_hook(dataset, 'prop', model)
+        
+        # Run training step and evaluation
         tr_loss = _trainer(dataset, model, optimizer, criterion)
-        res = evaluate(dataset, model, criterion, kwargs=kwargs)
+        results = evaluate(dataset, model, criterion, stage)
         
         # Timing & Printing
         epoch_time = time() - start_time
         total_time += epoch_time
-        if epoch % 10 == 0: epoch_print(epoch, tr_loss, res['l'], res['a'], epoch_time)
         
-        if not is_tune and epoch % 10 == 0: 
-            tmp = evaluate(dataset, model, criterion, kwargs={'full': True, **kwargs})
-            training_history.append({'epoch': epoch, 'loss': tr_loss, 'train_acc': res['a']})
+        if epoch % 10 == 0: 
+            l, a = results['l'], results['a']
+            epoch_print(epoch, tr_loss, l, a, epoch_time)
+        
+        if not trial and epoch % 10 == 0: 
+            tmp = {'epoch': epoch, 'loss': tr_loss, 'train_acc': results['a']}
+            training_history.append(tmp)
         
         # Early Stopping
-        if _stopper(early_stopping, kwargs): break
+        if _stopper(early_stopping, trial): break
     
     print(f"Total Training Time: {total_time:.2f}s")
-    return res if is_tune else {**res, 'training_time': total_time}
+    return results if not trial else {**results, 'training_time': total_time}

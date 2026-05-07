@@ -76,7 +76,7 @@ def _check_data_integrity(d):
 # *****************************
 # Models Validation
 # *****************************
-def validate_models(models: dict[str, type]) -> None:
+def validate_models(models: dict[str, nn.Module]) -> None:
     """Validates the models dictionary
     to ensure it contains valid nn.Module instances.
 
@@ -129,6 +129,7 @@ def validate_dataset(dataset: dict[str, object]) -> None:
             }
         """
     dataset_schema = Schema({
+        'name': str,
         'X': is_matrix,
         'y': is_matrix,
         'input_dim': And(int, lambda n: n > 0),
@@ -199,8 +200,11 @@ def _validate_hparam_values(model_hparam: dict, model_name: str) -> None:
                 raise ValueError(f"{base_msg} has an invalid specification.")
         
 
-def validate_hparam_config(hparam_config: dict, models: dict[str, nn.Module]) -> None:
+def validate_hparam_config(root: Path, models: dict[str, nn.Module]) -> None:
     """Validates the structure of the hyperparameter configuration."""
+    
+    # 0. Retrieve hparam config
+    hparam_config = json.load(open(root / "config" / "hparam.json"))
     
     # 1. Validate tuning keys match model names
     if not set(models.keys()).issubset(set(hparam_config.keys())):

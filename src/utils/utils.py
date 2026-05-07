@@ -12,8 +12,11 @@
 # Builtin
 import json
 from pathlib import Path
+from enum import Enum
+from typing import Literal
 
 # External
+from torch import nn
 
 # Relative
 
@@ -23,10 +26,10 @@ from pathlib import Path
 # #############################
 
 # Define ENUM for train, test, and tune stages
-class Stage:
+class Stage(Enum):
     TRAIN = 'train'
-    TEST = 'test'
-    TUNE = 'tune'
+    TEST  = 'test'
+    TUNE  = 'tune'
 
 
 # #############################
@@ -57,21 +60,28 @@ class EarlyStopping:
         else:
             self.best_score = score
             self.counter = 0
-            
+
+# Hook Runner
+# *****************************
+def run_hook(dataset: dict, hook_type: Literal['init', 'prop'],
+             model: nn.Module|None = None):
+    # Runs a custom hook function, modifies dataset in-place.
+    hook = dataset['modelwise']['func'].get(hook_type)
+    if hook: hook(dataset, model) if model else hook(dataset)
 
 # Parameter loading/saving
 # *****************************
-def load_params(model_name: str):
-    params = json.load(open(ROOT / 'config' / 'tuned.json'))
-    print(f'Loaded parameters for {model_name}')
-    return params[model_name]
+def load_params(root: Path, key: str):
+    params = json.load(open(root / 'config' / 'tuned.json'))
+    print(f'Loaded parameters for {key}')
+    return params[key]
 
-def save_params(model_name: str, model_params: dict):
-    params = ROOT / 'config' / 'tuned.json'
+def save_params(root: Path, key: str, model_params: dict):
+    params = root / 'config' / 'tuned.json'
     res = json.load(open(params))
-    res[model_name] = model_params
+    res[key] = model_params
     with open(params, "w") as jf: json.dump(res, jf, indent=4)
-    print(f'Saved parameters for {model_name}')
+    print(f'Saved parameters for {key}')
     
     
 # logging and packaging

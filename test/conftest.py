@@ -87,6 +87,7 @@ def valid_hparam_config():
 def raw_dataset():
     """Provides a fresh dictionary of dummy data."""
     return {
+        'name': 'DummyDataset',
         'X': np.random.rand(10, 5),
         'y': np.random.rand(10, 2),
         

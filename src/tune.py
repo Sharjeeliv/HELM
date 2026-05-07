@@ -17,19 +17,27 @@ import json
 import torch
 import optuna
 from optuna import Trial
+from torch import nn
 
 # Relative
 from .utils.optuna import get_model, get_optimizer, get_trial_params
+from .utils.utils import Stage
 from .loop import loop
 
 
 # #############################
+# VARS, CONSTS, & SETUP
+# #############################
+DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+# #############################
 # FUNCTIONS: HELPER
 # #############################
-def _objective(trial: Trial, models: dict, key: str, dataset: dict, kwargs: dict):
+def _objective(trial: Trial, key: str, models: dict, 
+               dataset: dict, root: Path, epochs: int):
     
     # Retrieve trial hyperparameters
-    hparams = get_trial_params(trial, key)
+    hparams = get_trial_params(root, key, trial)
     
     # Omit invalid configurations:
     try: model = get_model(models, key, hparams, dataset)
@@ -40,14 +48,16 @@ def _objective(trial: Trial, models: dict, key: str, dataset: dict, kwargs: dict
     c = torch.nn.CrossEntropyLoss()
     o = get_optimizer(model, hparams)
     
-    res = loop(model, c, o, dataset, epochs=TU_EPOCHS, kwargs={'trial': trial, **kwargs})
+    res = loop(model, c, o, dataset, epochs=epochs, 
+               stage=Stage.TUNE, trial=trial)
     return res['l']
 
 
 # #############################
 # FUNCTIONS: INTERFACE
 # #############################
-def tune(models: dict, key: str, dataset: dict, kwargs: dict = {}):
+def tune(root: Path, key: str, models: dict[str, nn.Module],
+         dataset: dict, epochs: int, n_trials: int) -> dict:
     
     # Guard Clause
     err_string = f"Model {key} not found in models dictionary."
@@ -55,5 +65,5 @@ def tune(models: dict, key: str, dataset: dict, kwargs: dict = {}):
     
     # Hyperparameter Tuning
     study = optuna.create_study(direction='minimize')
-    study.optimize(lambda trial: _objective(trial, models, key, dataset, kwargs),  n_trials=N_TRIALS)
+    study.optimize(lambda trial: _objective(trial, key, models, dataset, root, epochs),  n_trials=n_trials)
     return study.best_params

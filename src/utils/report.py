@@ -50,6 +50,16 @@ def plot_confusion_matrix(labels, preds, class_names, title, root):
     
 # FUNCTIONS: RESULT MANAGEMENT
 # *****************************
+def save_results(): pass
+
+
+
+
+
+
+
+
+
 # Validate folder structure:
 def validate_results_structure(root):
     # TODO: Remove this, combine with bottom

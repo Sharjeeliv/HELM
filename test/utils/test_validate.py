@@ -26,6 +26,16 @@ from src.utils.validate import (validate_dataset, validate_models,
                                 validate_dir_structure, 
                                 validate_hparam_config)
 
+# #############################
+# FUNCTIONS: HELPER
+# #############################
+def create_json(name, data, tmp_path):
+    """Helper to create a JSON file in the config directory."""
+    config_dir = tmp_path / "config"
+    config_dir.mkdir(exist_ok=True)
+    file_path = config_dir / name
+    file_path.write_text(json.dumps(data))
+    return file_path
 
 # #############################
 # FUNCTIONS: MAIN
@@ -107,20 +117,23 @@ def test_validate_models_errors(model_name, model_instance):
 # *****************************
 # TEST: VALIDATE_HPARAM_CONFIG
 # *****************************
-def test_validate_hparam_config_success(valid_hparam_config, models_dict):
-    validate_hparam_config(valid_hparam_config, models_dict)
+def test_validate_hparam_config_success(tmp_path, valid_hparam_config, models_dict):
+    create_json("hparam.json", valid_hparam_config, tmp_path)
+    validate_hparam_config(tmp_path, models_dict)
 
-def test_validate_hparam_missing_model_key(models_dict):
-    config = {} # Missing GCN and MockModel keys
+def test_validate_hparam_missing_model_key(tmp_path, models_dict):
+    # Setup: Create the config directory and an empty hparam file
+    create_json("hparam.json", {}, tmp_path)    
     with pytest.raises(ValueError):
-        validate_hparam_config(config, models_dict)
+        validate_hparam_config(tmp_path, models_dict)
 
-def test_validate_model_hparams_missing_param(models_dict):
-    # Missing 'hidden_dim' for MockModel
-    config = {"MockModel": {"activation": ["cat", "a"]},
-              "GCN": {"hidden_dim": ["int", 1, 10], "dropout": ["flt", 0.0, 0.5]}}
+def test_validate_model_hparams_missing_param(tmp_path, models_dict):
+    data = {"MockModel": {"activation": ["cat", "a"]},
+            "GCN": {"hidden_dim": ["int", 1, 10], "dropout": ["flt", 0.0, 0.5]}}
+    create_json("hparam.json", data, tmp_path)
+    
     with pytest.raises(ValueError):
-        validate_hparam_config(config, models_dict)
+        validate_hparam_config(tmp_path, models_dict)
 
 @pytest.mark.parametrize("bad_spec", [
     ["int", 10, 5],            # low > high
@@ -130,14 +143,20 @@ def test_validate_model_hparams_missing_param(models_dict):
     ["unknown", 1, 10],        # invalid dist name
     ["int", 1.5, 10.5],        # int dist with floats
 ])
-def test_validate_hparam_values_failures(models_dict, bad_spec):
-    config = {"MockModel": {
-                "hidden_dim": bad_spec,
-                "lr": ["log", 1e-4, 1e-2],
-                "activation": ["cat", "relu"]
-                }}
+def test_validate_hparam_values_failures(tmp_path, models_dict, bad_spec):
+    data = {
+        "MockModel": {
+            "hidden_dim": bad_spec,
+            "lr": ["log", 1e-4, 1e-2],
+            "activation": ["cat", "relu"]
+        },
+        "GCN": {
+            "hidden_dim": ["int", 1, 10], 
+            "dropout": ["flt", 0.0, 0.5]}}
+    create_json("hparam.json", data, tmp_path)
+    
     with pytest.raises(ValueError):
-        validate_hparam_config(config, models_dict)
+        validate_hparam_config(tmp_path, models_dict)
 
 # *****************************
 # TEST: VALIDATE_GLOBAL_CONFIG
