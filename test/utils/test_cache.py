@@ -80,13 +80,12 @@ def test_clear_cache_no_file(tmp_path):
     clear_cache(tmp_path)
     
     
-def test_create_cache_idempotency(tmp_path, cache_path):
+def test_create_cache_idempotency(cache_path):
     # Action 1: Create cache file
     _create_cache(cache_path)
     cache_path.write_text(json.dumps({"test": 1}))
-
     # Action 2: Should not overwrite if exists
     _create_cache(cache_path)
-
+    # Assert: Content should remain unchanged
     with cache_path.open('r') as f: data = json.load(f)
     assert data == {"test": 1}
