@@ -64,8 +64,10 @@ def _validate(dataset: dict):
 # FUNCTIONS: MAIN
 # #############################
 def validate(root: Path, models: dict[str, nn.Module], 
-             dataset: dict[str, object]) -> None:
+             expr_n: int) -> None:
     # General-global validation logic
+    e_msg = "Experiment number must be non-negative."
+    if expr_n < 0: raise ValueError(e_msg)
     _init_globals(root)
     validate_dir_structure(root)
     validate_models(models)
@@ -76,7 +78,9 @@ def validate(root: Path, models: dict[str, nn.Module],
 # #############################
 # FUNCTIONS: INTERFACE
 # #############################
-def helm(root: Path, key: str, model: nn.Module, dataset: dict[str, object], to_tune: bool = True):
+def helm(root: Path, expr_n: int, timestamp: str,
+         key: str, model: nn.Module, dataset: dict[str, object],
+         to_tune: bool = True) -> dict[str, float]:
     
     # 0. Guard Clauses: Ensure validation and initialization
     _validate(dataset)    # Ensure modelwise + dataset is valid
@@ -92,4 +96,6 @@ def helm(root: Path, key: str, model: nn.Module, dataset: dict[str, object], to_
     results = test(trmodel, dataset)
     
     # 5. Printing & Saving
+    
+    return results
     

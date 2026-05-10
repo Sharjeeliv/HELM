@@ -105,3 +105,26 @@ def raw_dataset():
                      'prop': lambda: None}
         }
     }
+    
+# *****************************
+# HELPER: RESULTS
+# *****************************
+@pytest.fixture
+def mock_results():
+    return {
+        "dataset":  "Cora",
+        "model":    "GCN",
+        "metrics":  {"accuracy": 0.85, "f1": 0.84},
+        "hparams":  {"hidden_dim": 64, "lr": 0.01},
+        "history":  [0.1, 0.2, 0.3]
+    }
+
+@pytest.fixture
+def timestamp():
+    return "20260508_120000"
+
+@pytest.fixture
+def results_path(tmp_path):
+    base_path = tmp_path / 'results' / 'experiments' / f"expr_1"
+    base_path.mkdir(parents=True, exist_ok=True)
+    return base_path
