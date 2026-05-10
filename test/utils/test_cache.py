@@ -13,16 +13,9 @@
 import json
 
 # External
-import pytest
-from pathlib import Path
 
 # Relative
 from src.utils.cache import _create_cache, write_cache, read_cache, clear_cache
-
-# #############################
-# VARS, CONSTS, & SETUP
-# #############################
-
 
 
 # #############################
