@@ -25,6 +25,7 @@ from .utils.validate import (validate_models, validate_dataset,
 from .tune import tune
 from .train import train
 from .test import test
+from .utils.report import save_results
 
 # #############################
 # VARS, CONSTS, & SETUP
@@ -83,7 +84,7 @@ def helm(root: Path, expr_n: int, timestamp: str,
          to_tune: bool = True) -> dict[str, float]:
     
     # 0. Guard Clauses: Ensure validation and initialization
-    _validate(dataset)    # Ensure modelwise + dataset is valid
+    _validate(dataset) # Ensure modelwise + dataset is valid
     _model = {key: model}
     
     # 1. Pipeline: Tuning or load cached hyperparameters
@@ -96,6 +97,7 @@ def helm(root: Path, expr_n: int, timestamp: str,
     results = test(trmodel, dataset)
     
     # 5. Printing & Saving
+    save_results(root, expr_n, timestamp, results)
     
     return results
     

@@ -128,3 +128,16 @@ def results_path(tmp_path):
     base_path = tmp_path / 'results' / 'experiments' / f"expr_1"
     base_path.mkdir(parents=True, exist_ok=True)
     return base_path
+
+
+# *****************************
+# HELPER: CACHE
+# *****************************
+@pytest.fixture
+def cache_params():
+    return {"hidden_dim": 64, "lr": 0.01}
+
+@pytest.fixture
+def cache_path(tmp_path):
+    # Returns the expected path where cache.json should live
+    return tmp_path / "cache" / "cache.json"
