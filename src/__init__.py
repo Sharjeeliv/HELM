@@ -62,11 +62,24 @@ def _validate(dataset: dict):
         raise ValueError("Global config not initialized. Call validate() first.")
     validate_dataset(dataset)
 
+
 # #############################
 # FUNCTIONS: MAIN
 # #############################
+def _validate_cache(root: Path, models: dict[str, nn.Module], datasets: list[str]) -> None:
+    for model_name in models:
+        for dataset_name in datasets:
+            hparams = read_cache(root, model_name, dataset_name)
+            if hparams is not None: continue
+            print(f"No cache found for {model_name} on {dataset_name}.", ' ')
+            print("This combination will be tuned and cached during execution.")
+
+
 def validate(root: Path, models: dict[str, nn.Module], expr_n: int, 
              datasets: list[str], to_tune=True) -> None:
+    # Allows the user to validate separately from the main pipeline, 
+    # which avoids expensive runs, useful for debugging and testing.
+    
     # General-global validation logic
     e_msg = "Experiment number must be non-negative."
     if expr_n < 0: raise ValueError(e_msg)
@@ -78,12 +91,8 @@ def validate(root: Path, models: dict[str, nn.Module], expr_n: int,
     
     # Validate dataset/model combinations if tuning is disabled
     if to_tune: return
-    for model_name in models:
-        for dataset_name in datasets:
-            hparams = read_cache(root, model_name, dataset_name)
-            if hparams is not None: continue
-            print(f"No cache found for {model_name} on {dataset_name}.", ' ')
-            print("This combination will be tuned and cached during execution.")
+    _validate_cache(root, models, datasets)
+
 
 # #############################
 # FUNCTIONS: INTERFACE
@@ -115,5 +124,4 @@ def helm(root: Path, expr_n: int, timestamp: str,
     
     # 5. Printing & Saving
     save_results(root, expr_n, timestamp, results)
-    
     return results
