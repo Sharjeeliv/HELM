@@ -26,6 +26,7 @@ from .tune import tune
 from .train import train
 from .test import test
 from .utils.report import save_results
+from .utils.cache import write_cache, read_cache, clear_cache
 
 # #############################
 # VARS, CONSTS, & SETUP
@@ -64,8 +65,8 @@ def _validate(dataset: dict):
 # #############################
 # FUNCTIONS: MAIN
 # #############################
-def validate(root: Path, models: dict[str, nn.Module], 
-             expr_n: int) -> None:
+def validate(root: Path, models: dict[str, nn.Module], expr_n: int, 
+             datasets: list[str], to_tune=True) -> None:
     # General-global validation logic
     e_msg = "Experiment number must be non-negative."
     if expr_n < 0: raise ValueError(e_msg)
@@ -74,7 +75,15 @@ def validate(root: Path, models: dict[str, nn.Module],
     validate_models(models)
     validate_hparam_config(root, models)
     validate_global_config(root)
-
+    
+    # Validate dataset/model combinations if tuning is disabled
+    if to_tune: return
+    for model_name in models:
+        for dataset_name in datasets:
+            hparams = read_cache(root, model_name, dataset_name)
+            if hparams is not None: continue
+            print(f"No cache found for {model_name} on {dataset_name}.", ' ')
+            print("This combination will be tuned and cached during execution.")
 
 # #############################
 # FUNCTIONS: INTERFACE
@@ -87,8 +96,16 @@ def helm(root: Path, expr_n: int, timestamp: str,
     _validate(dataset) # Ensure modelwise + dataset is valid
     _model = {key: model}
     
-    # 1. Pipeline: Tuning or load cached hyperparameters
-    hparams = tune(root, key, _model, dataset, epochs=TU_EPOCHS, n_trials=N_TRIALS)
+    # 1. Pipeline: Tuning
+    # a. Attempt to read from cache if tuning is not explicitly forced
+    hparams = read_cache(root, key, str(dataset['name'])) if not to_tune else None
+    # b. If no cache hit, or tuning is forced, run tuning and write to cache
+    if hparams is None:
+        print(f"Running tuning for {key} on {dataset['name']}...")
+        hparams = tune(root, key, _model, dataset, epochs=TU_EPOCHS, n_trials=N_TRIALS)
+        write_cache(root, key, str(dataset['name']), hparams)
+    else:
+        print(f"Using cached hyperparameters for {key} on {dataset['name']}.")
     
     # 2. Pipeline: Training
     trmodel = train(model, hparams, dataset, epochs=TR_EPOCHS)
@@ -100,4 +117,3 @@ def helm(root: Path, expr_n: int, timestamp: str,
     save_results(root, expr_n, timestamp, results)
     
     return results
-    
