@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "helm-grl"
-version = "0.1.0"
+version = "0.1.1"
 description = "Hyper(graph) Experiment and Learning Manager - A Generic Relational Learning Pipeline"
 requires-python = ">=3.10"
 dependencies = [
