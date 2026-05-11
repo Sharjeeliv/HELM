@@ -1,9 +1,11 @@
-# Title
+# HELM - Full Pipeline Test
 
-# Author:   Full Name
-# Created:  Date
+# Author:  Sharjeel Mustafa
+# Created: 2026-05-10
 
-# Objective: Short Summary. 
+# Objective: Integration test for the entire HELM pipeline using a simple MLP on the Cora dataset.
+#            This test validates that all components (data loading, training, testing, and caching) 
+#            work together as expected.
 
 
 # #############################
@@ -20,7 +22,8 @@ from sklearn.preprocessing import LabelEncoder
 
 
 # Relative
-from src import validate, helm
+from src import validate, helm, clear_cache
+
 
 # #############################
 # VARS, CONSTS, & SETUP
@@ -38,8 +41,9 @@ class SimpleClassifier(nn.Module):
 
 MODELS = {'MLP': SimpleClassifier}
 
+
 # #############################
-# FUNCTIONS: UTILITY
+# FUNCTIONS: HELPER
 # #############################
 def cora_loader():
     data_path = Path(__file__).parent.parent / 'fixtures' / 'cora'
@@ -86,72 +90,20 @@ def cora_loader():
         }
     }
     
-
-
-# #############################
-# FUNCTIONS: HELPER
-# #############################
-
-
-
+    
 # #############################
 # FUNCTIONS: MAIN
 # #############################
 def test_full_pipeline(): 
-    dataset =  cora_loader()
-    root = Path(__file__).parent
-    timestamp = "20260508_120000"
-    key = "MLP"
-    expr_n = 1
-    to_tune = True
     
-    print("Integration Test: Validating and Running Full Pipeline")
-    print(root)
+    root = Path(__file__).parent
+    dataset =  cora_loader()
+    
+    timestamp = "20260508_120000"
+    key, expr_n, to_tune = "MLP", 1, True
     
     validate(root, MODELS, expr_n, [dataset], to_tune=to_tune)
     helm(root, expr_n, timestamp, key, MODELS[key], dataset, to_tune=to_tune)
-
-
-# #############################
-# FUNCTIONS: INTERFACE
-# #############################
-
-
-
-# #############################
-# UTILITY: SNIPPETS & NOTES
-# #############################
-
-# File template for python, paste into empty .py files
-# Please remove these notes 'UTILITY: SNIPPETS & NOTES', and heading before comitting
-
-
-# FILE HEADING BREAKDOWN
-# Utility   - General purpose functions that are only used locally
-#             If used in multiple places, move to dedicated utils.py or utils folder
-# Helper    - Specific (non-general) functions that aid in the "main" task of the file
-# Main      - Functions that correspond to the file's main algorithms or tasks
-#             Note: A file should have limited main functions and do one type of thing!
-#             In other words have a separation of concerns
-# Interface - Functions that are designed to be called by other files, internals should
-#             be kept private (i.e., start with an underscore), unless the functionality
-#             is intended to be public, like some helpers or utils
-
-# FILE HEADING SNIPPETS
-
-# 1. Avoid adding any more first-level headings
-# 2. Second-level headings can be added as follows:
-
-# *****************************
-# Heading Title
-# *****************************
-
-# Or like if directly below a first-level heading:
-
-# Heading Title
-# *****************************
-
-# 3. Third-level headings can be added as follows:
-
-# Heading Title
-# -----------------------------
+    
+    # Clear cache and results folder
+    clear_cache(root)
