@@ -14,7 +14,7 @@ To provide flexibility with model propagation, all models must implement their `
 
 ```py
 
-def forward(self, x: torch.Tensor, extra: dict):
+def forward(self, x: torch.Tensor, modelwise: dict):
     # unpack extra as needed
 ```
 This allows for the model to take in specific data it may require (the user must ensure that it is packed into extra). Furthermore, it prevents overhead by only passing in objects as needed. This keeps all interfaces uniform while providing flexibility.
@@ -40,12 +40,15 @@ dataset = {
     'te_mask': te_mask,
     
     # 4. Utility Data
-    'mask': None,       # Dynamically assigned
     'encoder': encoder, # For inverse transforms
     
     # 5. Model-Specific
-    'extra': {
-        'G': G,             # Example: Incidence/Adjacency
+    'modelwise': {
+        'data': {}
+        'func': {
+            'init': callable
+            'prop': callable
+        }
     }
 }
 ```
