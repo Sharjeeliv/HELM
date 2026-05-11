@@ -13,6 +13,7 @@
 # Builtin
 import json
 from pathlib import Path
+from typing import Mapping, Type
 
 # External
 from torch import nn
@@ -27,6 +28,7 @@ from .train import train
 from .test import test
 from .utils.report import save_results
 from .utils.cache import write_cache, read_cache, clear_cache
+from .utils.optuna import get_model
 
 # #############################
 # VARS, CONSTS, & SETUP
@@ -66,17 +68,18 @@ def _validate(dataset: dict):
 # #############################
 # FUNCTIONS: MAIN
 # #############################
-def _validate_cache(root: Path, models: dict[str, nn.Module], datasets: list[str]) -> None:
+def _validate_cache(root: Path, models: Mapping[str, Type[nn.Module]], datasets: list[dict[str, object]]) -> None:
     for model_name in models:
-        for dataset_name in datasets:
+        for dataset in datasets:
+            dataset_name = str(dataset['name'])
             hparams = read_cache(root, model_name, dataset_name)
             if hparams is not None: continue
             print(f"No cache found for {model_name} on {dataset_name}.", ' ')
             print("This combination will be tuned and cached during execution.")
 
 
-def validate(root: Path, models: dict[str, nn.Module], expr_n: int, 
-             datasets: list[str], to_tune=True) -> None:
+def validate(root: Path, models: Mapping[str, Type[nn.Module]], expr_n: int, 
+             datasets: list[dict[str, object]], to_tune=True) -> None:
     # Allows the user to validate separately from the main pipeline, 
     # which avoids expensive runs, useful for debugging and testing.
     
@@ -98,14 +101,16 @@ def validate(root: Path, models: dict[str, nn.Module], expr_n: int,
 # FUNCTIONS: INTERFACE
 # #############################
 def helm(root: Path, expr_n: int, timestamp: str,
-         key: str, model: nn.Module, dataset: dict[str, object],
+         key: str, model: Type[nn.Module], dataset: dict[str, object],
          to_tune: bool = True) -> dict[str, float]:
     
     # 0. Guard Clauses: Ensure validation and initialization
+    print(f"Validating...")
     _validate(dataset) # Ensure modelwise + dataset is valid
     _model = {key: model}
     
     # 1. Pipeline: Tuning
+    print(f"Tuning...")
     # a. Attempt to read from cache if tuning is not explicitly forced
     hparams = read_cache(root, key, str(dataset['name'])) if not to_tune else None
     # b. If no cache hit, or tuning is forced, run tuning and write to cache
@@ -117,10 +122,19 @@ def helm(root: Path, expr_n: int, timestamp: str,
         print(f"Using cached hyperparameters for {key} on {dataset['name']}.")
     
     # 2. Pipeline: Training
-    trmodel = train(model, hparams, dataset, epochs=TR_EPOCHS)
+    print(f"Training...")
+    trmodel = get_model(_model, key, hparams, dataset)
+    trmodel, history = train(trmodel, hparams, dataset, epochs=TR_EPOCHS)
+    
+    print(trmodel, history)
     
     # 3. Pipeline: Testing
-    results = test(trmodel, dataset)
+    print(f"Testing...")
+    results = test(trmodel, dataset)    
+    # save results except preds and labels
+    metrics = {k: v for k, v in results.items() if k not in ['preds', 'labels']}
+    results = {'dataset': dataset['name'], 'model': key, 'metrics': metrics, 
+               'hparams': hparams, 'history': history}
     
     # 5. Printing & Saving
     save_results(root, expr_n, timestamp, results)

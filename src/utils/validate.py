@@ -13,6 +13,7 @@
 # Builtin
 from pathlib import Path
 from inspect import signature
+from typing import Mapping, Type
 import json
 
 # External
@@ -28,13 +29,13 @@ import numpy as np
 # #############################
 EXCLUDED_PARAMS = {'self', 'input_dim', 'output_dim', 'dataset', # Data-driven parameters
                    'lr', 'optimizer', 'weight_decay'}            # Non-model parameters
-REQUIRED_GLOBAL_CONFIG_KEYS = {'N_TRIALS', 'TR_EPOCH','TU_EPOCH', 'SEED'}
+REQUIRED_GLOBAL_CONFIG_KEYS = {'N_TRIALS', 'TR_EPOCHS','TU_EPOCHS', 'SEED'}
 
 # #############################
 # FUNCTIONS: HELPER
 # #############################
 def _is_callable(obj):
-    return callable(obj)
+    return callable(obj) or obj is None
 
 def is_matrix(obj):
     return hasattr(obj, "shape") or hasattr(obj, "__array__")
@@ -46,9 +47,11 @@ def _check_data_integrity(d):
     if len(d['X']) != len(d['y']):
         raise ValueError(f"X length ({len(d['X'])}) must match y length ({len(d['y'])})")
     
-    # 2. Contains NAN
-    if np.isnan(d['X']).any() or np.isnan(d['y']).any():
-        raise ValueError("Dataset contains NaN values, which are not allowed.")
+    # 2. Contains NAN (use non depracated)
+    # Convert to numpy array first
+    a = np.isnan(np.asarray(d['X'])).any()
+    b = np.isnan(np.asarray(d['y'])).any()
+    if a or b: raise ValueError("Dataset contains NaN values, which are not allowed.")
     
     # 3. Mask Overlap
     if (d['tr_mask'] & d['te_mask']).any():
@@ -76,12 +79,12 @@ def _check_data_integrity(d):
 # *****************************
 # Models Validation
 # *****************************
-def validate_models(models: dict[str, nn.Module]) -> None:
+def validate_models(models: Mapping[str, Type[nn.Module]]) -> None:
     """Validates the models dictionary
     to ensure it contains valid nn.Module instances.
 
     Args:
-        models (dict): A dictionary where keys are model names (str) and values are nn.Module subclasses.
+        models (Mapping[str, Type[nn.Module]]): A mapping where keys are model names (str) and values are nn.Module subclasses.
 
     Raises:
         ValueError: If any value in the models dictionary is not a subclass of nn.Module.
@@ -172,7 +175,7 @@ def validate_dir_structure(root: Path):
 # *****************************
 # Config Validation
 # *****************************
-def _validate_model_hparams(model_hparam: dict, model: nn.Module) -> None: 
+def _validate_model_hparams(model_hparam: dict, model: Type[nn.Module]) -> None: 
     """Validates the model hyperparameter keys
     in the tuning configuration match the model parameters."""
     model_params = set(signature(model.__init__).parameters.keys()) - EXCLUDED_PARAMS
@@ -200,7 +203,7 @@ def _validate_hparam_values(model_hparam: dict, model_name: str) -> None:
                 raise ValueError(f"{base_msg} has an invalid specification.")
         
 
-def validate_hparam_config(root: Path, models: dict[str, nn.Module]) -> None:
+def validate_hparam_config(root: Path, models: Mapping[str, Type[nn.Module]]) -> None:
     """Validates the structure of the hyperparameter configuration."""
     
     # 0. Retrieve hparam config

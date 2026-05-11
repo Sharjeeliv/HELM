@@ -14,6 +14,7 @@ from time import time
 from typing import Literal
 
 # External
+import torch
 from torch import nn
 from optuna import Trial
 import optuna
@@ -33,8 +34,8 @@ def _stopper(es: EarlyStopping, trial: Trial|None) -> bool:
     return True
 
 def _trainer(dataset, model, optimizer, criterion):
-    X, y, m = dataset['X'], dataset['y'], dataset['mask']
-    if m is None: raise Exception("No mask provided with key 'mask'!")
+    X, y, m = dataset['X'], dataset['y'], dataset['tr_mask']
+    if m is None: raise Exception("No mask provided with key 'tr_mask'!")
     
     model.train()
     optimizer.zero_grad()
@@ -49,7 +50,17 @@ def _trainer(dataset, model, optimizer, criterion):
 # #############################
 def loop(model: nn.Module, criterion, optimizer, dataset, 
          epochs: int, stage: Stage, trial: Trial|None =None
-         ) -> dict[str, float]:
+         ) -> dict[str, object]:
+    
+    # Move everything to the same device
+    DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model.to(DEVICE)
+    criterion.to(DEVICE)
+    dataset['X'] = dataset['X'].to(DEVICE)
+    dataset['y'] = dataset['y'].to(DEVICE)
+    dataset['tr_mask'] = dataset['tr_mask'].to(DEVICE)
+    dataset['te_mask'] = dataset['te_mask'].to(DEVICE)
+    dataset['va_mask'] = dataset['va_mask'].to(DEVICE)
     
     total_time = 0.0
     early_stopping = EarlyStopping()
@@ -73,11 +84,12 @@ def loop(model: nn.Module, criterion, optimizer, dataset,
             epoch_print(epoch, tr_loss, l, a, epoch_time)
         
         if not trial and epoch % 10 == 0: 
-            tmp = {'epoch': epoch, 'loss': tr_loss, 'train_acc': results['a']}
+            tmp = {'epoch': epoch, 'loss': tr_loss, 'train_acc': results['a'].item()}
             training_history.append(tmp)
         
         # Early Stopping
         if _stopper(early_stopping, trial): break
     
     print(f"Total Training Time: {total_time:.2f}s")
-    return results if not trial else {**results, 'training_time': total_time}
+    if stage == Stage.TUNE: return {'l': results['l'], 'a': results['a']}
+    return {"metrics": results, "history": training_history, "time": total_time}

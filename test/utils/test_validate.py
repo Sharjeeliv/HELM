@@ -166,15 +166,15 @@ def test_validate_global_config_success(tmp_path):
     config_dir.mkdir()
     config_file = config_dir / "global.json"
     
-    data = {"N_TRIALS": 10, "TR_EPOCH": 100, "TU_EPOCH": 50, "SEED": 42}
+    data = {"N_TRIALS": 10, "TR_EPOCHS": 100, "TU_EPOCHS": 50, "SEED": 42}
     config_file.write_text(json.dumps(data))
     validate_global_config(tmp_path)
 
 @pytest.mark.parametrize("invalid_data", [
-    {"N_TRIALS": 10, "TR_EPOCH": 100, "TU_EPOCH": 50},                      # Missing SEED
-    {"N_TRIALS": 10, "TR_EPOCH": 100, "TU_EPOCH": 50, "SEED": -1},          # Negative value
-    {"N_TRIALS": 10, "TR_EPOCH": 100, "TU_EPOCH": 50, "SEED": "not int"},   # Wrong type
-    {"N_TRIALS": 0, "TR_EPOCH": 100, "TU_EPOCH": 50, "SEED": 42},           # Zero value
+    {"N_TRIALS": 10, "TR_EPOCHS": 100, "TU_EPOCHS": 50},                      # Missing SEED
+    {"N_TRIALS": 10, "TR_EPOCHS": 100, "TU_EPOCHS": 50, "SEED": -1},          # Negative value
+    {"N_TRIALS": 10, "TR_EPOCHS": 100, "TU_EPOCHS": 50, "SEED": "not int"},   # Wrong type
+    {"N_TRIALS": 0, "TR_EPOCHS": 100, "TU_EPOCHS": 50, "SEED": 42},           # Zero value
 ])
 def test_validate_global_config_failures(tmp_path, invalid_data):
     config_dir = tmp_path / "config"

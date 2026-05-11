@@ -49,13 +49,13 @@ def trial_type(trial: Trial, name: str, config: dict):
 def get_trial_params(root: Path, key: str, trial: Trial):
     params = _get_hparams(root, key)
     model_params = {}
-    for param_name, param_range in params[key].items():
+    for param_name, param_range in params.items():
         suggest_func = trial_type(trial, param_name, param_range)
         model_params[param_name] = suggest_func
     return model_params
 
 
-def get_model(models, key, hparams, dataset):
+def get_model(models, key, hparams, dataset) -> torch.nn.Module:
     run_hook(dataset, 'init', None)
     model_cls = models[key]
     # Filter non-model params
@@ -64,7 +64,7 @@ def get_model(models, key, hparams, dataset):
     # Merge model and task params
     struct_params = {'input_dim':  dataset['input_dim'], 
                      'output_dim': dataset['output_dim']}
-    final_params = {**model_params, **struct_params, **dataset['extra']}
+    final_params = {**model_params, **struct_params, **dataset['modelwise']['data']}
     return model_cls(**final_params)
 
 

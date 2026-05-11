@@ -26,8 +26,8 @@ from .utils.utils import Stage
 def _metrics(preds, labels, loss):
     a = accuracy_score(labels, preds)
     p, r, f1, _ = class_metrics(labels, preds, average='macro', zero_division=0)
-    metrics = {'a': a, 'p': p, 'r': r, 'f': f1, 'l': loss, 
-               'preds': preds, 'labels': labels}
+    metrics = {'a': float(a), 'p': float(p), 'r': float(r), 'f': float(f1), 'l': float(loss),
+               'preds': preds.tolist(), 'labels': labels.tolist()}
     return metrics
 
 def _get_mask(dataset, stage: Stage):
@@ -54,7 +54,7 @@ def evaluate(dataset, model, criterion, stage: Stage):
 
     # Return select metrics based on stage
     if stage == Stage.TRAIN:    return {'l': l, 'a': a}
-    if stage == Stage.TEST:     return {'l': l, 'a': a}
+    if stage == Stage.TUNE:     return {'l': l, 'a': a}
 
     # Return full metrics for testing stage
     preds = preds[m].argmax(1).cpu().numpy()

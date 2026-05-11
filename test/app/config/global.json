@@ -1,0 +1,6 @@
+{
+    "N_TRIALS":  50,
+    "TR_EPOCHS": 100,
+    "TU_EPOCHS": 50,
+    "SEED":      2026
+}

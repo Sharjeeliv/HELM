@@ -11,6 +11,7 @@
 # #############################
 # Builtin
 from pathlib import Path
+from typing import Type
 import json
 
 # External
@@ -26,8 +27,8 @@ from .utils.utils import Stage
 # #############################
 # FUNCTIONS: INTERFACE
 # #############################
-def train(model: nn.Module, hparams: dict, dataset: dict, epochs: int)-> nn.Module:
+def train(model: nn.Module, hparams: dict, dataset: dict, epochs: int)-> tuple[nn.Module, object]:
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = get_optimizer(model, hparams)
-    loop(model, criterion, optimizer, dataset, epochs=epochs, stage=Stage.TRAIN)
-    return model
+    res = loop(model, criterion, optimizer, dataset, epochs=epochs, stage=Stage.TRAIN)
+    return model, res['history']

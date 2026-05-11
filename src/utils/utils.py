@@ -14,6 +14,7 @@ import json
 from pathlib import Path
 from enum import Enum
 from typing import Literal
+import inspect
 
 # External
 from torch import nn
@@ -67,7 +68,10 @@ def run_hook(dataset: dict, hook_type: Literal['init', 'prop'],
              model: nn.Module|None = None):
     # Runs a custom hook function, modifies dataset in-place.
     hook = dataset['modelwise']['func'].get(hook_type)
-    if hook: hook(dataset, model) if model else hook(dataset)
+    if not hook: return
+    # Depending on number of parameters, call with model or without
+    p = inspect.signature(hook).parameters
+    if hook: hook(dataset, model) if len(p)==2 else hook(dataset)
 
 # Parameter loading/saving
 # *****************************

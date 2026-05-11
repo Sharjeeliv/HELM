@@ -11,6 +11,7 @@
 # #############################
 # Builtin
 from pathlib import Path
+from typing import Mapping, Type
 import json
 
 # External
@@ -33,7 +34,7 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # #############################
 # FUNCTIONS: HELPER
 # #############################
-def _objective(trial: Trial, key: str, models: dict, 
+def _objective(trial: Trial, key: str, models: Mapping[str, Type[nn.Module]], 
                dataset: dict, root: Path, epochs: int):
     
     # Retrieve trial hyperparameters
@@ -56,7 +57,7 @@ def _objective(trial: Trial, key: str, models: dict,
 # #############################
 # FUNCTIONS: INTERFACE
 # #############################
-def tune(root: Path, key: str, models: dict[str, nn.Module],
+def tune(root: Path, key: str, models: Mapping[str, Type[nn.Module]],
          dataset: dict, epochs: int, n_trials: int) -> dict:
     
     # Guard Clause
