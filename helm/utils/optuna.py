@@ -64,7 +64,7 @@ def get_model(models, key, hparams, dataset) -> torch.nn.Module:
     # Merge model and task params
     struct_params = {'input_dim':  dataset['input_dim'], 
                      'output_dim': dataset['output_dim']}
-    final_params = {**model_params, **struct_params, **dataset['modelwise']['data']}
+    final_params = {**model_params, **struct_params, **{'dataset': dataset}}
     return model_cls(**final_params)
 
 
