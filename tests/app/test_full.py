@@ -22,7 +22,7 @@ from sklearn.preprocessing import LabelEncoder
 
 
 # Relative
-from src import validate, helm, clear_cache
+from helm import validate, helm, clear_cache
 
 
 # #############################

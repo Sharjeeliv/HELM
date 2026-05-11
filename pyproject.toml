@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "helm-grl"
+version = "0.1.0"
+description = "Hyper(graph) Experiment and Learning Manager - A Generic Relational Learning Pipeline"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "optuna",
+    "schema",
+    "scikit-learn",
+    "pandas",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["helm*"]

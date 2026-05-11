@@ -16,7 +16,7 @@ from pathlib import Path
 # External
 
 # Relative
-from .src.utils.validate import validate_models, validate_dataset
+from .helm.utils.validate import validate_models, validate_dataset
 
 
 # #############################

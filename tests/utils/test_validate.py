@@ -21,7 +21,7 @@ import numpy as np
 from torch import nn
 
 # Relative
-from src.utils.validate import (validate_dataset, validate_models, 
+from helm.utils.validate import (validate_dataset, validate_models, 
                                 validate_global_config, 
                                 validate_dir_structure, 
                                 validate_hparam_config)
